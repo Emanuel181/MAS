@@ -6,7 +6,7 @@ import asyncio
 from agents.traffic_agent import TrafficAgent
 from agents.supervisor_agent import SupervisorAgent
 
-NUM_CUSTOMERS = 10  # Set this to however many customers you want
+NUM_CUSTOMERS = 11  # Set this to however many customers you want
 
 async def main():
     print("🟢 Starting main()...")

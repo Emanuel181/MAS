@@ -23,5 +23,4 @@ COURIERS = {
     "courier3@localhost": "courierpass3",
     "courier4@localhost": "courierpass4",
     "courier5@localhost": "courierpass5",
-
 }
