@@ -1,0 +1,42 @@
+2025-06-09T17:12:28.766330,courier@localhost,"Delivered: Deliver to: Str. Universității 10, Weight: 4kg, Urgency: low using Route A → D → C (faster)"
+2025-06-09T17:12:28.778977,courier@localhost,"Delivered: Deliver to: Str. Eroilor 33, Weight: 2kg, Urgency: medium using Route A → B → C"
+2025-06-09T17:12:32.761309,courier@localhost,"Delivered: Deliver to: Str. Eroilor 24, Weight: 5kg, Urgency: medium using Route A → E → F → C"
+2025-06-09T17:12:32.776271,courier@localhost,"Delivered: Deliver to: Str. Republicii 38, Weight: 1kg, Urgency: medium using Route A → E → F → C"
+2025-06-09T17:12:36.766738,courier@localhost,"Delivered: Deliver to: Str. Republicii 9, Weight: 1kg, Urgency: low using Route A → E → F → C"
+2025-06-09T17:12:36.782892,courier@localhost,"Delivered: Deliver to: Str. Universității 43, Weight: 1kg, Urgency: low using Route A → E → F → C"
+2025-06-09T17:17:13.511847,courier@localhost,"Delivered: Parcel 1: Deliver to Piata 700, Weight: 5kg, Urgency: medium using Route A → E → F → C"
+2025-06-09T17:17:18.520036,courier@localhost,"Delivered: Parcel 2: Deliver to Piata Libertatii, Weight: 5kg, Urgency: low using Route A → B → C"
+2025-06-09T17:17:23.524612,courier@localhost,"Delivered: Parcel 3: Deliver to Piata Victoriei, Weight: 2kg, Urgency: medium using Route A → B → C"
+2025-06-09T17:19:18.926558,courier@localhost,"Delivered: Parcel 1: Deliver to Piata Libertatii, Weight: 4kg, Urgency: low using Route A → E → F → C",Total deliveries: 1
+2025-06-09T17:19:23.940467,courier@localhost,"Delivered: Parcel 2: Deliver to Piata Victoriei, Weight: 5kg, Urgency: high using Route A → D → C (faster)",Total deliveries: 2
+2025-06-09T17:19:28.944137,courier@localhost,"Delivered: Parcel 3: Deliver to Piata 700, Weight: 4kg, Urgency: medium using Route A → D → C (faster)",Total deliveries: 3
+2025-06-09T17:46:25.553518,courier1@localhost,"Delivered: Parcel 1: Deliver to Piata Victoriei, Weight: 4kg, Urgency: high using route: Route A → B → C",Total deliveries: 1
+2025-06-09T17:46:27.570325,courier2@localhost,"Delivered: Parcel 2: Deliver to Piata Victoriei, Weight: 2kg, Urgency: high using route: Route A → B → C",Total deliveries: 1
+2025-06-09T17:46:30.571021,courier1@localhost,"Delivered: Parcel 3: Deliver to Piata Libertatii, Weight: 2kg, Urgency: medium using route: Route A → D → C (faster)",Total deliveries: 2
+2025-06-09T18:20:06.168153,courier1@localhost,575eda7d-8df2-432f-9da3-12755aa61b33,1,"Parcel 1: Deliver to Piata Victoriei, Weight: 5kg, Urgency: medium",Route A → E → F → C,1
+2025-06-09T18:20:08.177795,courier1@localhost,2612235f-5fbb-45ae-8b56-fa05cdd4a26f,1,"Parcel 1: Deliver to Piata 700, Weight: 2kg, Urgency: low",Route A → E → F → C,2
+2025-06-09T18:20:09.066983,courier2@localhost,0d14ff47-d44d-42b0-9d07-83778cf25512,1,"Parcel 2: Deliver to Piata 700, Weight: 4kg, Urgency: medium",Route A → B → C,1
+2025-06-09T18:20:11.079169,courier2@localhost,92105409-0fdd-44be-b8f5-d5083aa297f2,1,"Parcel 2: Deliver to Piata 700, Weight: 1kg, Urgency: medium",Route A → E → F → C,2
+2025-06-09T18:20:13.089710,courier2@localhost,024c03f7-fcbc-48b0-8b1d-c11801c40a7f,1,"Parcel 3: Deliver to Piata Victoriei, Weight: 3kg, Urgency: low",Route A → D → C (faster),3
+2025-06-09T18:20:14.145462,courier1@localhost,43c04679-2ff1-4f89-8f4c-fee371fdb031,1,"Parcel 3: Deliver to Piata Libertatii, Weight: 1kg, Urgency: low",Route A → D → C (faster),3
+2025-06-09T18:42:49.041588,courier1@localhost,81f0eebd-8be4-4c95-9561-77f494030e6e,1,"Parcel 1: Deliver to Piata Victoriei, Weight: 1kg, Urgency: low",Route A → D → C (faster),1
+2025-06-09T18:42:51.057809,courier1@localhost,6db53106-6856-4fc0-bed6-3b50e882d377,1,"Parcel 1: Deliver to Piata Libertatii, Weight: 1kg, Urgency: high",Route A → B → C,2
+2025-06-09T18:42:51.089037,courier2@localhost,51112068-cb80-4267-8d8f-565a4e2ccdb6,1,"Parcel 2: Deliver to Piata Libertatii, Weight: 1kg, Urgency: medium",Route A → E → F → C,1
+2025-06-09T18:42:53.103254,courier2@localhost,931b34aa-770e-4455-8566-d7cd9645d503,1,"Parcel 1: Deliver to Piata Libertatii, Weight: 2kg, Urgency: low",Route A → B → C,2
+2025-06-09T18:42:55.118519,courier2@localhost,8a2843f5-d157-4500-b4ed-4f35ced6597e,1,"Parcel 2: Deliver to Piata Victoriei, Weight: 5kg, Urgency: medium",Route A → D → C (faster),3
+2025-06-09T18:42:55.180533,courier1@localhost,9eb561c6-0ff7-425b-ad7a-d61c757c2948,1,"Parcel 3: Deliver to Piata 700, Weight: 4kg, Urgency: medium",Route A → D → C (faster),3
+2025-06-09T18:42:57.183661,courier1@localhost,234811ed-becd-4808-897c-e2de8bee756c,1,"Parcel 3: Deliver to Piata Libertatii, Weight: 1kg, Urgency: high",Route A → E → F → C,4
+2025-06-09T18:43:38.897833,courier1@localhost,1a12e0e3-b7a7-4b0c-92b6-40ffa7afb6c8,1,"Parcel 1: Deliver to Piata Victoriei, Weight: 3kg, Urgency: high",Route A → B → C,1
+2025-06-09T18:43:40.909663,courier1@localhost,ccb2cd59-dfb2-4bd9-b977-0a49e5c6be1d,1,"Parcel 1: Deliver to Piata Victoriei, Weight: 1kg, Urgency: low",Route A → E → F → C,2
+2025-06-09T18:43:40.910197,courier2@localhost,8ab5975f-5bc4-4490-834f-5f81ea88c412,1,"Parcel 2: Deliver to Piata Victoriei, Weight: 4kg, Urgency: high",Route A → D → C (faster),1
+2025-06-09T18:43:42.921017,courier2@localhost,309f6b47-eb76-4577-a385-cdf77b34958a,1,"Parcel 1: Deliver to Piata 700, Weight: 5kg, Urgency: medium",Route A → E → F → C,2
+2025-06-09T18:43:44.934079,courier2@localhost,8f7f6862-eb1d-4d55-939a-f50f12a4ce03,1,"Parcel 3: Deliver to Piata 700, Weight: 1kg, Urgency: low",Route A → B → C,3
+2025-06-09T18:43:45.011432,courier1@localhost,31503f31-73b6-4a2d-bfee-8132dc00c7d1,1,"Parcel 3: Deliver to Piata Victoriei, Weight: 1kg, Urgency: medium",Route A → D → C (faster),3
+2025-06-09T18:43:47.025536,courier1@localhost,4e6abcbc-2850-4d1c-b8ab-6de979a73a24,1,"Parcel 3: Deliver to Piata Libertatii, Weight: 5kg, Urgency: low",Route A → D → C (faster),4
+2025-06-09T19:12:15.379063,courier1@localhost,1ba0f295-bab5-42a3-a28a-874ea86333a6,1,"Parcel 1: Deliver to Piata Victoriei, Weight: 2kg, Urgency: medium",Route A → B → C,1,,,2025-06-09T19:12:13.361922,2025-06-09T19:12:15.377535
+2025-06-09T19:12:17.393128,courier1@localhost,8d319461-4ba5-4bcd-a8e6-aeeda36276f8,1,"Parcel 1: Deliver to Piata Libertatii, Weight: 3kg, Urgency: high",Route A → D → C (faster),2,,,2025-06-09T19:12:15.378330,2025-06-09T19:12:17.391518
+2025-06-09T19:12:17.566608,courier2@localhost,c1470cbc-8db3-4b4c-8212-0100251a07b6,1,"Parcel 1: Deliver to Piata 700, Weight: 3kg, Urgency: low",Route A → D → C (faster),1,,,2025-06-09T19:12:15.553000,2025-06-09T19:12:17.563529
+2025-06-09T19:12:19.580468,courier2@localhost,9f1806ae-3aff-4c3f-a61a-09f8e7b5e8ec,1,"Parcel 1: Deliver to Piata 700, Weight: 4kg, Urgency: high",Route A → E → F → C,2,,,2025-06-09T19:12:17.565103,2025-06-09T19:12:19.577523
+2025-06-09T19:12:21.597113,courier2@localhost,05bef235-404c-40f0-8f99-355ac2b1c8cf,1,"Parcel 2: Deliver to Piata Libertatii, Weight: 4kg, Urgency: low",Route A → B → C,3,,,2025-06-09T19:12:19.578628,2025-06-09T19:12:21.593818
+2025-06-09T19:12:21.597876,courier1@localhost,5fd5bf16-debe-45c6-9640-cb8c83eb0107,1,"Parcel 3: Deliver to Piata 700, Weight: 5kg, Urgency: medium",Route A → D → C (faster),3,,,2025-06-09T19:12:19.584959,2025-06-09T19:12:21.594677
+2025-06-09T19:12:23.611745,courier1@localhost,4d8dbaa8-430c-438f-86eb-cc2070f33739,1,"Parcel 3: Deliver to Piata Libertatii, Weight: 5kg, Urgency: high",Route A → E → F → C,4,,,2025-06-09T19:12:21.595872,2025-06-09T19:12:23.610674
