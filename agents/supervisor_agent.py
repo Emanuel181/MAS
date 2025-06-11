@@ -1,107 +1,124 @@
+# agents/supervisor_agent.py
+import uuid
+
+from slixmpp import jid
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
 from spade.message import Message
 from spade.template import Template
 from collections import defaultdict
-import csv
 from datetime import datetime
+from settings import DATABASE_JID, GIS_JID, WAREHOUSE_LOCATION
 
-def log_agent_comm(sender, receiver, msg_type):
-    with open("agent_comm_log.csv", "a") as f:
-        f.write(f"{datetime.now().isoformat()},{sender},{receiver},{msg_type}\n")
 
 class SupervisorAgent(Agent):
-    class MonitorDeliveries(CyclicBehaviour):
+    """
+    Monitors all courier agents, performs intelligent load balancing,
+    and handles queries about parcel statuses.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.courier_stats = {}  # Live status of each courier
+
+        # FIX 1: The CSV header is now written here, only once on startup.
+        # This creates/clears the file and writes the column names.
+        with open("courier_status.csv", "w") as f:
+            f.write("jid,location,battery,load,is_busy,last_updated\n")
+
+    class MonitorAndQueryHandler(CyclicBehaviour):
+        """
+        Listens for courier status updates, delivery reports, and
+        customer parcel status queries.
+        """
+
         async def run(self):
-            msg = await self.receive(timeout=10)
-            if msg:
-                sender = str(msg.sender).split("/")[0]
-                # Log receiving the delivery report
-                log_agent_comm(sender, str(self.agent.jid), "delivery_report")
+            msg = await self.receive(timeout=5)
+            if not msg:
+                return
 
-                if sender in self.agent.courier_stats:
-                    self.agent.courier_stats[sender] += 1
-                else:
-                    print(f"⚠️ Warning: Unknown courier {sender} reported delivery, ignoring")
+            msg_type = msg.metadata.get("type")
 
-                count = self.agent.courier_stats[sender]
+            if msg_type == "courier_status":
+                jid, loc, bat, load, busy = msg.body.split('|')
+                self.agent.courier_stats[jid] = {
+                    "location": loc, "battery": float(bat),
+                    "load": load, "is_busy": busy == 'True',
+                    "last_updated": datetime.now()
+                }
 
-                # Check overload
-                if count >= self.agent.overload_threshold:
-                    print(f"⚠️ Courier {sender} is overloaded! ({count} deliveries)")
+                # FIX 2: The code to write a data row is moved here.
+                # It now runs correctly because jid, loc, bat, etc. exist in this scope.
+                with open("courier_status.csv", "a") as f:
+                    f.write(f"{jid},{loc},{bat},{load},{busy},{datetime.now().isoformat()}\n")
 
-                # --- Advanced CSV Logging ---
-                with open("delivery_log.csv", "a", newline="", encoding="utf-8") as f:
-                    writer = csv.writer(f)
-                    body_parts = msg.body.split('|')
-                    parcel_id      = body_parts[0] if len(body_parts) > 0 else ''
-                    version        = body_parts[1] if len(body_parts) > 1 else ''
-                    parcel_info    = body_parts[2] if len(body_parts) > 2 else ''
-                    route          = body_parts[3] if len(body_parts) > 3 else ''
-                    lat            = body_parts[4] if len(body_parts) > 4 else ''
-                    lon            = body_parts[5] if len(body_parts) > 5 else ''
-                    start_time     = body_parts[6] if len(body_parts) > 6 else ''
-                    end_time       = body_parts[7] if len(body_parts) > 7 else ''
-                    writer.writerow([
-                        datetime.now().isoformat(),
-                        sender,
-                        parcel_id,
-                        version,
-                        parcel_info,
-                        route,
-                        count,      # total delivered by this courier
-                        lat,
-                        lon,
-                        start_time,
-                        end_time
-                    ])
-            else:
-                print("⌛ Supervisor waiting for delivery reports...")
+
+            elif msg_type == "delivery_report":
+                parcel_id, status, timestamp = msg.body.split('|')
+                print(f"📈 Supervisor: Received delivery report for {parcel_id}. Status: {status}")
+                db_msg = Message(to=DATABASE_JID)
+                db_msg.set_metadata("performative", "update")
+                db_msg.set_metadata("type", "delivery_log")
+                db_msg.body = f"{parcel_id}|{status}|{timestamp}"
+                await self.send(db_msg)
+
+            elif msg_type == "parcel_status_query":
+                parcel_id = msg.body
+                print(f"❓ Supervisor: Customer {msg.sender.user} asks about parcel {parcel_id}.")
+                # Query DB for parcel status
+                db_query = Message(to=DATABASE_JID)
+                db_query.set_metadata("performative", "query")
+                db_query.set_metadata("type", "parcel_info")
+                db_query.thread = str(uuid.uuid4())
+                db_query.body = parcel_id
+                await self.send(db_query)
+
+                # Wait for DB response
+                db_res = await self.receive(timeout=5)
+                if db_res and db_res.thread == db_query.thread:
+                    response_msg = Message(to=str(msg.sender))
+                    response_msg.set_metadata("performative", "inform")
+                    response_msg.set_metadata("type", "status_update")
+                    response_msg.body = db_res.body  # Forward the DB response
+                    await self.send(response_msg)
 
     class LoadBalancer(CyclicBehaviour):
-        async def run(self):
-            msg = await self.receive(timeout=10)
-            if msg and msg.metadata.get("type") == "load_balance":
-                print("📊 Load balance request received.")
+        """
+        Responds to requests from the Warehouse for the best courier
+        for a new assignment.
+        """
 
-                overloaded = [
-                    c for c, cnt in self.agent.courier_stats.items()
-                    if cnt >= self.agent.overload_threshold
+        async def run(self):
+            msg = await self.receive(timeout=5)
+            if msg and msg.metadata.get("type") == "best_courier_request":
+                print("⚖️ Supervisor: Load balancing request received from Warehouse.")
+                available_couriers = [
+                    (jid, stats) for jid, stats in self.agent.courier_stats.items()
+                    if not stats["is_busy"] and stats["battery"] > 25
                 ]
-                valid_couriers = [
-                    c for c in self.agent.courier_stats
-                    if c not in overloaded
-                ]
-                if valid_couriers:
-                    least_loaded = min(valid_couriers, key=lambda c: self.agent.courier_stats[c])
-                    print(f"📤 Load balancer chose courier: {least_loaded}")
-                else:
-                    least_loaded = "NONE"  # special string: all overloaded!
-                    print("⚠️ All couriers are overloaded. Cannot assign right now.")
+
+                best_courier = None
+                if available_couriers:
+                    # Simple scoring: lower load and closer to warehouse is better
+                    # A more complex scoring function could be used here
+                    best_courier = min(available_couriers, key=lambda c: int(c[1]['load'].split('/')[0]))[0]
 
                 response = Message(to=str(msg.sender))
                 response.thread = msg.thread
                 response.set_metadata("performative", "inform")
-                response.set_metadata("type", "load_response")
-                response.body = least_loaded
+                response.set_metadata("type", "best_courier_response")
+                response.body = best_courier if best_courier else "NONE"
                 await self.send(response)
-                # Log sending load_balance response
-                log_agent_comm(str(self.agent.jid), str(msg.sender), "load_response")
+                if best_courier:
+                    print(f"✅ Supervisor: Selected {best_courier} for the job.")
+                else:
+                    print("⚠️ Supervisor: No suitable couriers found.")
 
     async def setup(self):
         print(f"🟢 SupervisorAgent ({str(self.jid)}) started.")
-        self.overload_threshold = 3
-        self.courier_stats = defaultdict(int)
-        known_couriers = ["courier1@localhost", "courier2@localhost"]  # Expand as needed
-        for courier in known_couriers:
-            self.courier_stats[courier] = 0
-
-        template_delivery = Template()
-        template_delivery.set_metadata("performative", "inform")
-        template_delivery.set_metadata("type", "delivery_report")
-        self.add_behaviour(self.MonitorDeliveries(), template_delivery)
-
+        self.add_behaviour(self.MonitorAndQueryHandler())
+        # Template for load balancing requests
         template_load = Template()
         template_load.set_metadata("performative", "request")
-        template_load.set_metadata("type", "load_balance")
+        template_load.set_metadata("type", "best_courier_request")
         self.add_behaviour(self.LoadBalancer(), template_load)

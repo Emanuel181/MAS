@@ -1,112 +1,157 @@
 # agents/courier_agent.py
 
-from spade.agent import Agent
-from spade.behaviour import FSMBehaviour, State
-from spade.message import Message
-from spade.template import Template
 import asyncio
 import uuid
+from spade.agent import Agent
+from spade.behaviour import FSMBehaviour, State, PeriodicBehaviour
+from spade.message import Message
+from settings import GIS_JID, SUPERVISOR_JID, DATABASE_JID, WAREHOUSE_LOCATION
 from datetime import datetime
-from config import TRAFFIC_JID, SUPERVISOR_JID
 
-def log_agent_comm(sender, receiver, msg_type):
-    with open("agent_comm_log.csv", "a") as f:
-        f.write(f"{datetime.now().isoformat()},{sender},{receiver},{msg_type}\n")
-
-STATE_WAIT_ASSIGNMENT = "STATE_WAIT_ASSIGNMENT"
-STATE_REQUEST_ROUTE = "STATE_REQUEST_ROUTE"
-STATE_DELIVER_PARCEL = "STATE_DELIVER_PARCEL"
+STATE_IDLE = "STATE_IDLE"
+STATE_MOVING_TO_DESTINATION = "STATE_MOVING_TO_DESTINATION"
+STATE_MOVING_TO_DEPOT = "STATE_MOVING_TO_DEPOT"
+STATE_CHARGING = "STATE_CHARGING"
 
 class CourierAgent(Agent):
+    """
+    Represents a courier who picks up parcels, delivers them, and manages
+    its own battery and capacity.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.current_location = WAREHOUSE_LOCATION
+        self.parcels_to_deliver = []
+        self.route = []
+        self.battery = 100.0
+        self.capacity = 5 # Max 5 parcels
+        self.is_busy = False
+
     class DeliveryFSM(FSMBehaviour):
         async def on_start(self):
-            print(f"🚚 Courier FSM ({self.agent.jid.user}) starting at WAIT_ASSIGNMENT")
-            self.agent.current_parcel = None
-            self.agent.current_route = None
-            self.agent.current_parcel_id = None
-            self.agent.current_parcel_version = None
-            self.agent.current_parcel_info = None
-            self.agent.current_parcel_lat = None
-            self.agent.current_parcel_lon = None
-            self.agent.current_parcel_start = None
+            print(f"🚚 Courier FSM ({self.agent.jid.user}) starting at IDLE.")
 
-    class WaitAssignmentState(State):
+    class IdleState(State):
+        """
+        The courier is at the warehouse, ready for assignments or charging.
+        """
         async def run(self):
-            print(f"⌛ Courier ({self.agent.jid.user}) waiting for parcel assignments...")
-            msg = await self.receive(timeout=20)
-            if msg:
-                print(f"🚚 Courier ({self.agent.jid.user}) received parcel: {msg.body}")
-                # Log receipt of parcel assignment (optional)
-                log_agent_comm(str(self.agent.jid), str(msg.sender), "parcel_assignment")
-                parts = msg.body.split('|')
-                self.agent.current_parcel_id = parts[0] if len(parts) > 0 else ""
-                self.agent.current_parcel_version = parts[1] if len(parts) > 1 else ""
-                self.agent.current_parcel_info = parts[2] if len(parts) > 2 else msg.body
-                self.agent.current_parcel_lat = parts[4] if len(parts) > 4 else ""
-                self.agent.current_parcel_lon = parts[5] if len(parts) > 5 else ""
-                self.agent.current_parcel = msg.body
-                self.agent.current_parcel_start = datetime.now().isoformat()
-                self.set_next_state(STATE_REQUEST_ROUTE)
+            # If battery is low, charge first
+            if self.agent.battery < 20:
+                self.set_next_state(STATE_CHARGING)
+                return
+
+            print(f"⌛ Courier ({self.agent.jid.user}) is idle at the depot. Battery: {self.agent.battery:.1f}%")
+            msg = await self.receive(timeout=10)
+            if msg and msg.metadata.get("type") == "parcel_assignment":
+                self.agent.is_busy = True
+                parcel_id, urgency, info = msg.body.split('|', 2)
+                destination = info.split("Deliver to ")[1].split(',')[0] # Basic parsing
+
+                self.agent.parcels_to_deliver.append({"id": parcel_id, "info": info, "destination": destination})
+                print(f"👍 Courier ({self.agent.jid.user}): Accepted parcel {parcel_id}.")
+
+                # Request a route from the GIS agent
+                route_req = Message(to=GIS_JID)
+                route_req.set_metadata("performative", "request")
+                route_req.set_metadata("type", "route_request")
+                route_req.body = f"{self.agent.current_location}|{destination}"
+                await self.send(route_req)
+
+                # Wait for route
+                route_res = await self.receive(timeout=5)
+                if route_res and route_res.metadata.get("type") == "route_response":
+                    self.agent.route = eval(route_res.body) # Route is a list of coordinates
+                    self.set_next_state(STATE_MOVING_TO_DESTINATION)
+                else:
+                    print(f"⛔ Courier ({self.agent.jid.user}): Could not get route. Delivery failed.")
+                    # Handle failure
             else:
-                self.set_next_state(STATE_WAIT_ASSIGNMENT)
+                 self.set_next_state(STATE_IDLE)
 
-    class RequestRouteState(State):
+    class MovingToDestinationState(State):
+        """
+        Simulates the courier moving along the route to deliver a parcel.
+        """
         async def run(self):
-            print("🧭 Requesting optimal route from TrafficAgent...")
-            thread_id = str(uuid.uuid4())
-            route_request = Message(to=TRAFFIC_JID)
-            route_request.thread = thread_id
-            route_request.set_metadata("performative", "request")
-            route_request.set_metadata("type", "route")
-            await self.send(route_request)
-            log_agent_comm(str(self.agent.jid), TRAFFIC_JID, "route")
+            target_destination = self.agent.route[-1]
+            print(f"🚚 Courier ({self.agent.jid.user}): Moving to {target_destination}. Parcels: {len(self.agent.parcels_to_deliver)}")
+            # Simulate movement
+            await asyncio.sleep(5) # Travel time
+            self.agent.battery -= 2.5 # Battery consumption
 
-            response = None
-            start_time = asyncio.get_event_loop().time()
-            while asyncio.get_event_loop().time() - start_time < 5:
-                msg = await self.receive(timeout=1)
-                if msg and msg.thread == thread_id:
-                    response = msg
-                    # Log receipt of route (optional)
-                    log_agent_comm(str(self.agent.jid), str(msg.sender), "route_response")
-                    break
-                elif msg:
-                    print(f"⚠️ Courier FSM received unexpected message: {msg.body}")
+            self.agent.current_location = target_destination
+            delivered_parcel = self.agent.parcels_to_deliver.pop(0)
+            print(f"✅ Courier ({self.agent.jid.user}): Delivered parcel {delivered_parcel['id']} at {self.agent.current_location}.")
 
-            if response:
-                print(f"✅ Route acquired: {response.body}")
-                self.agent.current_route = response.body
-            else:
-                print("⚠️ Could not acquire route from TrafficAgent.")
-                self.agent.current_route = "Route unavailable 🚫"
-
-            self.set_next_state(STATE_DELIVER_PARCEL)
-
-    class DeliverParcelState(State):
-        async def run(self):
-            print("🚚 Delivering parcel...")
-            await asyncio.sleep(2)  # Simulate delivery time
-            print("📦 Parcel delivered.")
-
-            delivery_end = datetime.now().isoformat()
+            # Inform Supervisor
             report = Message(to=SUPERVISOR_JID)
             report.set_metadata("performative", "inform")
             report.set_metadata("type", "delivery_report")
-            report.body = f"{self.agent.current_parcel_id}|{self.agent.current_parcel_version}|{self.agent.current_parcel_info}|{self.agent.current_route}|{self.agent.current_parcel_lat}|{self.agent.current_parcel_lon}|{self.agent.current_parcel_start}|{delivery_end}"
+            report.body = f"{delivered_parcel['id']}|DELIVERED|{datetime.now().isoformat()}"
             await self.send(report)
-            log_agent_comm(str(self.agent.jid), SUPERVISOR_JID, "delivery_report")
-            print("📬 Report sent to SupervisorAgent.")
 
-            self.set_next_state(STATE_WAIT_ASSIGNMENT)
+            # If more parcels to deliver, get next route or head back to depot
+            if not self.agent.parcels_to_deliver:
+                self.set_next_state(STATE_MOVING_TO_DEPOT)
+            else:
+                # In a more complex scenario, might chain deliveries
+                self.set_next_state(STATE_MOVING_TO_DEPOT) # Simplified: return after each delivery
+
+
+    class MovingToDepotState(State):
+        """
+        Courier is returning to the main depot.
+        """
+        async def run(self):
+            print(f"↩️ Courier ({self.agent.jid.user}): Returning to depot. Battery: {self.agent.battery:.1f}%")
+            # Simulate movement
+            await asyncio.sleep(5)
+            self.agent.battery -= 2.5
+            self.agent.current_location = WAREHOUSE_LOCATION
+            self.agent.is_busy = False
+            print(f"🏠 Courier ({self.agent.jid.user}): Arrived at depot.")
+            self.set_next_state(STATE_IDLE)
+
+    class ChargingState(State):
+        """
+        Courier is charging its battery at the depot.
+        """
+        async def run(self):
+            print(f"🔋 Courier ({self.agent.jid.user}): Battery low ({self.agent.battery:.1f}%). Charging...")
+            while self.agent.battery < 99:
+                await asyncio.sleep(2)
+                self.agent.battery += 10
+                print(f"⚡ Courier ({self.agent.jid.user}): Charging... {self.agent.battery:.1f}%")
+            self.agent.battery = 100.0
+            print(f"💯 Courier ({self.agent.jid.user}): Fully charged.")
+            self.set_next_state(STATE_IDLE)
+
+    class StatusUpdateBehaviour(PeriodicBehaviour):
+        """
+        Periodically sends its status (location, battery) to the Supervisor.
+        """
+        async def run(self):
+            status_msg = Message(to=SUPERVISOR_JID)
+            status_msg.set_metadata("performative", "inform")
+            status_msg.set_metadata("type", "courier_status")
+            status_msg.body = f"{self.agent.jid.user}|{self.agent.current_location}|{self.agent.battery:.1f}|{len(self.agent.parcels_to_deliver)}/{self.agent.capacity}|{self.agent.is_busy}"
+            await self.send(status_msg)
 
     async def setup(self):
         print(f"🟢 CourierAgent ({str(self.jid)}) started.")
         fsm = self.DeliveryFSM()
-        fsm.add_state(name=STATE_WAIT_ASSIGNMENT, state=self.WaitAssignmentState(), initial=True)
-        fsm.add_state(name=STATE_REQUEST_ROUTE, state=self.RequestRouteState())
-        fsm.add_state(name=STATE_DELIVER_PARCEL, state=self.DeliverParcelState())
-        fsm.add_transition(source=STATE_WAIT_ASSIGNMENT, dest=STATE_WAIT_ASSIGNMENT)
-        fsm.add_transition(source=STATE_WAIT_ASSIGNMENT, dest=STATE_REQUEST_ROUTE)
-        fsm.add_transition(source=STATE_REQUEST_ROUTE, dest=STATE_DELIVER_PARCEL)
-        fsm.add_transition(source=STATE_DELIVER_PARCEL, dest=STATE_WAIT_ASSIGNMENT)
+        fsm.add_state(name=STATE_IDLE, state=self.IdleState(), initial=True)
+        fsm.add_state(name=STATE_MOVING_TO_DESTINATION, state=self.MovingToDestinationState())
+        fsm.add_state(name=STATE_MOVING_TO_DEPOT, state=self.MovingToDepotState())
+        fsm.add_state(name=STATE_CHARGING, state=self.ChargingState())
+
+        fsm.add_transition(source=STATE_IDLE, dest=STATE_IDLE)
+        fsm.add_transition(source=STATE_IDLE, dest=STATE_MOVING_TO_DESTINATION)
+        fsm.add_transition(source=STATE_IDLE, dest=STATE_CHARGING)
+        fsm.add_transition(source=STATE_MOVING_TO_DESTINATION, dest=STATE_MOVING_TO_DEPOT)
+        fsm.add_transition(source=STATE_MOVING_TO_DEPOT, dest=STATE_IDLE)
+        fsm.add_transition(source=STATE_CHARGING, dest=STATE_IDLE)
         self.add_behaviour(fsm)
+        self.add_behaviour(self.StatusUpdateBehaviour(period=10))
