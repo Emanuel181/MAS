@@ -45,9 +45,6 @@ MAS2/
 ⚙️ Requirements
 Install the required packages:
 
-bash
-Copy
-Edit
 pip install spade streamlit plotly pandas matplotlib
 Also make sure a local XMPP server (e.g., ejabberd or Openfire) is running and agents are registered.
 
@@ -79,18 +76,12 @@ COURIERS = {
 
 WAREHOUSE_LOCATION = "Warehouse"
 2. Launch the Agent System
-bash
-Copy
-Edit
 python main.py
 This launches all agents: Database, GIS, Supervisor, Warehouse, Customer, and Couriers.
 
 3. Start the Real-Time Dashboard
 In a separate terminal:
 
-bash
-Copy
-Edit
 streamlit run dasboard.py
 Features:
 
